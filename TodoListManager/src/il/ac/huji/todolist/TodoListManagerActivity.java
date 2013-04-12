@@ -1,27 +1,27 @@
 package il.ac.huji.todolist;
 
-import java.util.ArrayList;
-import java.util.Date;
 
+import java.util.Date;
 import android.net.Uri;
 import android.os.Bundle;
 import android.app.Activity;
 import android.content.Intent;
+import android.database.Cursor;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import il.ac.huji.todolist.AddNewTodoItemActivity;
 
 public class TodoListManagerActivity extends Activity 
 {
-	ListView list;
-	ArrayList<TodoItem> itemsEntries;
-	private ArrayAdapter<TodoItem> newAdapter;
+	ListView listView;
+	Cursor myCursor;
+    private MyNewAdapter myAdapter;
+    private TodoDAL myDal;
 	final static private String callStr = "Call ", telStr = "tel:";
 	final static private int callClickPos = 1;
 	
@@ -30,41 +30,65 @@ public class TodoListManagerActivity extends Activity
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_todo_list_manager);
 
-		itemsEntries = new ArrayList<TodoItem>();
-		newAdapter = new MyNewAdapter(this, itemsEntries);
-
-		list = (ListView)findViewById(R.id.lstTodoItems);
-		list.setAdapter(newAdapter);
-        registerForContextMenu(list);
+		myDal = new TodoDAL(this);
+        String[] from = { "title", "due" };
+        int[] to = { R.id.txtTodoTitle, R.id.txtTodoDueDate };
+        myAdapter = new MyNewAdapter(this, R.layout.row, myDal.getCursor(), from, to);
+        
+        listView = (ListView)findViewById(R.id.lstTodoItems);
+        listView.setAdapter(myAdapter);
+        registerForContextMenu(listView);
+        listView = (ListView)findViewById(R.id.lstTodoItems);
+        registerForContextMenu(listView);
 	}
 
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
-		AdapterContextMenuInfo adaptInfo = (AdapterContextMenuInfo) item.getMenuInfo();
-		TodoItem selectedItem = newAdapter.getItem(adaptInfo.position);
+		AdapterContextMenuInfo ACMInfo = (AdapterContextMenuInfo)item.getMenuInfo();
+        int selectedItemIndex = ACMInfo.position;
+        myCursor.moveToPosition(selectedItemIndex);
+        boolean isDateNull = (myCursor.getString(2) == null);
+        TodoItem selectedItem;
+        if (isDateNull){
+        	selectedItem = new TodoItem(myCursor.getString(1), null);
+        }
+        else{
+        	selectedItem = new TodoItem(myCursor.getString(1), new Date(myCursor.getLong(2)));
+        }
 		switch (item.getItemId())
 		{
 			case R.id.menuItemCall:
 				Intent intentToCall = new Intent(Intent.ACTION_DIAL);
-				intentToCall.setData(Uri.parse(selectedItem.title.replace(callStr, telStr)));
+				intentToCall.setData(Uri.parse(selectedItem.getTitle().replace(callStr, telStr)));
 			    startActivity(intentToCall);
 				break;
 			case R.id.menuItemDelete:
-				newAdapter.remove(selectedItem);
-				break;
+				myDal.delete(selectedItem);
+                refresh();
+                break;
 		}
 		return true;
+	}
+	
+	public void refresh(){
+		myCursor = myDal.getCursor();
+		myAdapter.changeCursor(myCursor);
+		myAdapter.notifyDataSetChanged();
 	}
 	
 	
 	@Override
 	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
 		getMenuInflater().inflate(R.menu.menu_context, menu);
-		AdapterContextMenuInfo info = (AdapterContextMenuInfo)menuInfo;
-		TodoItem item = (newAdapter.getItem(info.position));
-		menu.setHeaderTitle(item.title);
-		if (item.title.contains(callStr))
-			menu.getItem(callClickPos).setTitle(item.title);
+        AdapterContextMenuInfo ACMInfo = (AdapterContextMenuInfo)menuInfo;
+        
+        myCursor = myAdapter.getCursor();
+        myCursor.moveToPosition(ACMInfo.position);
+        
+        String title = myCursor.getString(1);
+		menu.setHeaderTitle(title);
+		if (title.contains(callStr))
+			menu.getItem(callClickPos).setTitle(title);
 		else
 			menu.removeItem(R.id.menuItemCall);
 	}
@@ -98,10 +122,9 @@ public class TodoListManagerActivity extends Activity
     
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     	if (requestCode == 1337 && resultCode == RESULT_OK) {
-    		String itemStr = data.getStringExtra("title");
-    		Date wantedDate = (Date)data.getSerializableExtra("dueDate");
-    		newAdapter.add(new TodoItem(itemStr, wantedDate));
-    	}
+    		myDal.insert(new TodoItem(data.getStringExtra("title"), (Date)data.getSerializableExtra("dueDate")));
+            refresh();    	
+            }
     }
 
 }
