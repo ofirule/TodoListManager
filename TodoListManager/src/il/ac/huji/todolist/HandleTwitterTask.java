@@ -92,10 +92,9 @@ public class HandleTwitterTask extends AsyncTask<String, Void, ArrayList<TwitObj
 	private void setAddItemsListener(final ArrayList<TwitObj> result){
 		_addItemsListener =  new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
-                // Create new todo items
-            	for (int i=0; i<result.size(); i++) {
-            		if (result.get(i).getId() > _latestTweetId) {
-                		_myDAL.insert(new TodoItem(result.get(i).getBody(), null));                		}
+            	for (int j=0; j<result.size(); j++) {
+            		if (result.get(j).getId() > _latestTweetId) {
+                		_myDAL.insert(new TodoItem(result.get(j).getBody(), null));                		}
             	}
             	
             	Cursor cursor = _myDAL.getCursor();
