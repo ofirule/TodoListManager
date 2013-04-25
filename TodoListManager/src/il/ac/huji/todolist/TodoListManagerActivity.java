@@ -4,8 +4,10 @@ package il.ac.huji.todolist;
 import java.util.Date;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.view.ContextMenu;
 import android.view.Menu;
@@ -24,22 +26,32 @@ public class TodoListManagerActivity extends Activity
     private TodoDAL myDal;
 	final static private String callStr = "Call ", telStr = "tel:";
 	final static private int callClickPos = 1;
+	public final static String SETTINGS_HASHTAG_KEY = "hashtag_key";
+
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_todo_list_manager);
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
 
 		myDal = new TodoDAL(this);
         String[] from = { "title", "due" };
         int[] to = { R.id.txtTodoTitle, R.id.txtTodoDueDate };
         myAdapter = new MyNewAdapter(this, R.layout.row, myDal.getCursor(), from, to);
         
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String stringPrefs = sharedPrefs.getString(SETTINGS_HASHTAG_KEY, "todoapp");
+        
+        HandleTwitterTask task = new HandleTwitterTask(TodoListManagerActivity.this, stringPrefs, myDal, myAdapter);
+        task.execute();
+        
         listView = (ListView)findViewById(R.id.lstTodoItems);
         listView.setAdapter(myAdapter);
         registerForContextMenu(listView);
         listView = (ListView)findViewById(R.id.lstTodoItems);
         registerForContextMenu(listView);
+                       
 	}
 
 	@Override
@@ -109,6 +121,12 @@ public class TodoListManagerActivity extends Activity
     {
         switch (item.getItemId())
         {
+    	case R.id.menuItemSettings:
+    		Intent settingsIntent = new Intent(this, SettingsActivity.class);
+    		startActivityForResult(settingsIntent, 1338);
+    		
+    		return true;
+    		
         case R.id.menuItemAdd:
         	Intent addIntent = new Intent(this, AddNewTodoItemActivity.class);
     		startActivityForResult(addIntent, 1337);

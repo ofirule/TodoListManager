@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+	<EditTextPreference 
+	    android:key="hashtag_key"
+	    android:title="Twitter Hashtag"
+	    android:summary="The hashtag you search on twitter in order to find items"
+	    android:defaultValue="todoapp"/>
+</PreferenceScreen>
